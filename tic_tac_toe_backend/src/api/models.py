@@ -21,11 +21,18 @@ class GameResult(PyEnum):
 
 # PUBLIC_INTERFACE
 class User(Base):
-    """Database model for a user."""
+    """Database model for a user.
+
+    A player is identified by a nickname (chosen or generated for anonymous).
+    """
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, nullable=False, index=True)
+    # Nickname (required, not necessarily unique, but indexed). 
+    nickname = Column(String, nullable=False, index=True)
+    # For unique/old compatibility (some endpoints may still reference it; keep for now, but optional)
+    username = Column(String, unique=True, nullable=True, index=True)  # DEPRECATED
+
     games = relationship("Game", back_populates="creator")
 
 # PUBLIC_INTERFACE

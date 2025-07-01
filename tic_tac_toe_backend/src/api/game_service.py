@@ -219,7 +219,7 @@ def get_leaderboard(db: Session, limit: int = 10) -> List[Dict]:
         user = db.query(User).filter(User.id == entry.user_id).first()
         leaderboard.append({
             "user_id": entry.user_id,
-            "username": user.username if user else "Unknown",
+            "nickname": user.nickname if user else "Anonymous",
             "wins": entry.total_wins
         })
     return leaderboard

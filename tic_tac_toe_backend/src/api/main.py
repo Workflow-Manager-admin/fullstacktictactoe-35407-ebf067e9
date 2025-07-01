@@ -53,6 +53,14 @@ app.add_middleware(
 )
 
 # ---- Pydantic schemas ----
+class RegisterUserRequest(BaseModel):
+    """Request body for registration/announcing a new player."""
+    nickname: str = Field(..., description="Player's nickname (chosen or generated)")
+class RegisterUserResponse(BaseModel):
+    """Response body for registering a player/nickname"""
+    user_id: int
+    nickname: str
+
 class StartGameRequest(BaseModel):
     """Request body for starting a new game."""
     player_x_id: int = Field(..., description="User ID for player X")
@@ -94,12 +102,39 @@ class GameStateResponse(BaseModel):
 class LeaderboardEntry(BaseModel):
     """Single leaderboard entry."""
     user_id: int
-    username: str
+    nickname: str
     wins: int
 
 class LeaderboardResponse(BaseModel):
     """Leaderboard API response."""
     leaderboard: List[LeaderboardEntry]
+
+# PUBLIC_INTERFACE
+@app.post(
+    "/register_user",
+    response_model=RegisterUserResponse,
+    tags=["Game"],
+    summary="Register a new player by nickname",
+    description="Register a new player with a chosen or generated nickname. Returns player ID and nickname.",
+    response_description="Player record",
+)
+def register_user(
+    payload: RegisterUserRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Register a new user/player (anonymous or chosen nickname).
+    If a player has used this nickname before, return their user_id.
+    """
+    # Try to find an existing user with this nickname (not enforcing uniqueness)
+    user = db.query(User).filter(User.nickname == payload.nickname).first()
+    if user:
+        return RegisterUserResponse(user_id=user.id, nickname=user.nickname)
+    user = User(nickname=payload.nickname)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return RegisterUserResponse(user_id=user.id, nickname=user.nickname)
 
 @app.on_event("startup")
 def on_startup():
