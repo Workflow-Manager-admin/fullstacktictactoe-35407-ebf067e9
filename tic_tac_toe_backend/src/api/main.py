@@ -20,15 +20,33 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 
+# OpenAPI tags for grouping
+openapi_tags = [
+    {
+        "name": "Game",
+        "description": "Endpoints for starting games, making moves, and querying game state."
+    },
+    {
+        "name": "Leaderboard",
+        "description": "Leaderboard and statistics retrieval endpoints."
+    },
+    {
+        "name": "Health",
+        "description": "System health/status check."
+    }
+]
+
 app = FastAPI(
     title="Tic Tac Toe Backend API",
     description="Backend for multiplayer Tic Tac Toe with user management and persistent results.",
-    version="0.1.0"
+    version="0.1.0",
+    openapi_tags=openapi_tags
 )
 
+# CORS: allow all origins for development, update for production as needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost", "http://localhost:3000", "*"],  # customize for prod!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -91,9 +109,15 @@ def on_startup():
     Base.metadata.create_all(bind=engine)
 
 # PUBLIC_INTERFACE
-@app.get("/")
+@app.get(
+    "/",
+    tags=["Health"],
+    summary="Health check endpoint",
+    description="Service health check for deployment or uptime monitoring.",
+    response_description="Returns a simple status message."
+)
 def health_check():
-    """Check service health."""
+    """Check backend service health (use for monitoring)."""
     return {"message": "Healthy"}
 
 
@@ -101,15 +125,19 @@ def health_check():
 @app.get(
     "/leaderboard",
     response_model=LeaderboardResponse,
+    tags=["Leaderboard"],
     summary="Get leaderboard",
-    description="Returns a leaderboard of top players and their win counts."
+    description="Returns a leaderboard of top players and their win counts.",
+    response_description="Leaderboard: user id, username, and win totals"
 )
 def leaderboard(
     limit: int = 10,
     db: Session = Depends(get_db)
 ):
     """
-    Get the leaderboard of top players by number of wins.
+    Returns the leaderboard sorted by total wins, descending.
+
+    - **limit**: Max number of records to return (default 10)
     """
     results = get_leaderboard(db, limit=limit)
     return LeaderboardResponse(leaderboard=[
@@ -121,15 +149,19 @@ def leaderboard(
 @app.get(
     "/game_state",
     response_model=GameStateResponse,
+    tags=["Game"],
     summary="Get state of a game",
-    description="Fetches the complete board, moves, and metadata for a specified game id.",
+    description="Fetches the board, all moves and metadata for a specified game id.",
+    response_description="Game state including current board and history."
 )
 def get_game_state(
-    game_id: int,
+    game_id: int = Field(..., description="Game ID to retrieve state for."),
     db: Session = Depends(get_db)
 ):
     """
-    Get the complete state of a game (board, moves, whose turn, status/result) for the given game_id.
+    Get the complete state of a Tic Tac Toe game.
+
+    - **game_id**: The game to retrieve
     """
     game = db.query(Game).filter(Game.id == game_id).first()
     if not game:
@@ -160,19 +192,21 @@ def get_game_state(
 @app.post(
     "/make_move",
     response_model=MoveResponse,
+    tags=["Game"],
     summary="Make a move",
-    description="Apply a move for the current player. Returns success, error message (if any), updated board, and game status/result."
+    description="Apply a move for the current player. Returns success, error message (if any), updated board, and game status/result.",
+    response_description="Information about the applied move, board state, and game result."
 )
 def make_move(
     payload: MakeMoveRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Apply a move for the current player.
+    Apply a move for the current player (validate, update board, determine state).
 
     - **game_id**: Game to play in
     - **player_symbol**: "X" or "O"
-    - **row**, **col**: Location for the move
+    - **row**, **col**: Location for the move (0-based)
     """
     game = db.query(Game).filter(Game.id == payload.game_id).first()
     if not game:
@@ -198,8 +232,10 @@ def make_move(
 @app.post(
     "/start_game",
     response_model=GameResponse,
+    tags=["Game"],
     summary="Start a new Tic Tac Toe game",
-    description="Creates a new Tic Tac Toe game with specified player X and optional player O."
+    description="Creates a new Tic Tac Toe game with specified player X and optional player O.",
+    response_description="Returns a new game object."
 )
 def start_game(
     payload: StartGameRequest,

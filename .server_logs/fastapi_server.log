@@ -50,7 +50,7 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap_external>", line 995, in exec_module
   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
   File "/home/kavia/workspace/code-generation/fullstacktictactoe-35407-ebf067e9/tic_tac_toe_backend/src/api/main.py", line 8, in <module>
-    from .db import Base, engine
+    from .db import Base, engine, get_db
   File "/home/kavia/workspace/code-generation/fullstacktictactoe-35407-ebf067e9/tic_tac_toe_backend/src/api/db.py", line 6, in <module>
     from sqlalchemy import create_engine
 ModuleNotFoundError: No module named 'sqlalchemy'
