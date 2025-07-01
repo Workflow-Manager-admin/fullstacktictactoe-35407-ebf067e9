@@ -15,7 +15,7 @@ from .game_service import (
 )
 from .models import Game, User, GameStatus
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
@@ -190,7 +190,7 @@ def leaderboard(
     response_description="Game state including current board and history."
 )
 def get_game_state(
-    game_id: int = Field(..., description="Game ID to retrieve state for."),
+    game_id: int = Query(..., description="Game ID to retrieve state for."),
     db: Session = Depends(get_db)
 ):
     """
